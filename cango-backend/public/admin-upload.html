@@ -12,7 +12,8 @@
     <input type="text" id="category" placeholder="Category" required><br><br>
     <input type="text" id="language" placeholder="Language" required><br><br>
     <input type="text" id="type" placeholder="Type (e.g., Learn or Originals)" required><br><br>
-    <input type="text" id="poster_url" placeholder="Poster URL" required><br><br>
+    <input type="file" id="posterFile" accept="image/*" required><br><br>
+
     <input type="email" id="adminEmail" placeholder="Admin Email" required><br><br>
     <button type="submit">Upload</button>
   </form>
@@ -32,7 +33,7 @@
         category: document.getElementById('category').value,
         language: document.getElementById('language').value,
         type: document.getElementById('type').value,
-        poster_url: document.getElementById('poster_url').value
+         
       };
 
       const adminEmail = document.getElementById('adminEmail').value;
@@ -63,5 +64,48 @@
       }
     });
   </script>
+  <script>
+document.getElementById("contentForm").addEventListener("submit", async function (e) {
+  e.preventDefault();
+
+  const posterFile = document.getElementById("posterFile").files[0];
+
+  // 1️⃣ Upload poster first
+  const posterData = new FormData();
+  posterData.append("poster", posterFile);
+
+  const uploadRes = await fetch("/api/upload/poster", {
+    method: "POST",
+    body: posterData
+  });
+
+  const uploadResult = await uploadRes.json();
+
+  // 2️⃣ Upload content with poster URL
+  const contentData = {
+    title: document.getElementById("title").value,
+    description: document.getElementById("description").value,
+    category: document.getElementById("category").value,
+    language: document.getElementById("language").value,
+    type: document.getElementById("type").value,
+    poster_url: uploadResult.poster_url,
+    visible: 1
+  };
+
+  const res = await fetch("/api/admin/content", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(contentData)
+  });
+
+  if (res.ok) {
+    alert("Content uploaded successfully!");
+    document.getElementById("contentForm").reset();
+  } else {
+    alert("Upload failed");
+  }
+});
+</script>
+
 </body>
 </html>

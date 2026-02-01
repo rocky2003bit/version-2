@@ -7,6 +7,8 @@ const db = require('./config/db');
 const adminRoutes = require('./routes/adminRoutes');
 const locationRoutes = require('./routes/locationRoutes');
 const orderRoutes = require('./routes/orderRoutes'); // ✅ Add this near the top
+const uploadRoutes = require("./routes/uploadRoutes");
+
 dotenv.config();
 
 const app = express();
@@ -18,6 +20,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ✅ Middleware
 app.use(cors());
 app.use(express.json());
+app.use("/api/upload", uploadRoutes);
 
 // ✅ API routes
 app.use('/api/auth', authRoutes);
@@ -95,8 +98,8 @@ app.get('/api/users/:email', (req, res) => {
   });
 });
 
-app.get('/api/admin/orders', (req, res) => {
-  const searchEmail = req.query.email; // optional search
+ app.get('/api/admin/orders', async (req, res) => {
+  const searchEmail = req.query.email;
 
   let sql = `
     SELECT 
@@ -110,17 +113,20 @@ app.get('/api/admin/orders', (req, res) => {
     JOIN users u ON o.user_email = u.email
   `;
 
+  const params = [];
+
   if (searchEmail) {
     sql += ` WHERE u.email LIKE ?`;
+    params.push(`%${searchEmail}%`);
   }
 
   sql += ` ORDER BY o.created_at DESC`;
 
-  db.query(sql, searchEmail ? [`%${searchEmail}%`] : [], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).send('Server error');
-    }
-    res.json(results);
-  });
+  try {
+    const [results] = await db.query(sql, params);
+    return res.json(results);
+  } catch (err) {
+    console.error("❌ /api/admin/orders error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
 });
